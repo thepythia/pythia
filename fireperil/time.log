@@ -1,0 +1,54 @@
+svm.SVR(kernel='rbf', C=1.0, gamma=0.1,cache_size=2000,max_iter=10)  6.97443829516
+
+[zhimo.bmz@storm010207030001 pycharm]$ python2.7 fpSVM.py
+2014-08-04 07:36:06.655160
+/usr/lib/python2.7/site-packages/sklearn/svm/base.py:204: ConvergenceWarning: Solver terminated early (max_iter=10).  Consider pre-processing your data with StandardScaler or MinMaxScaler.
+  % self.max_iter, ConvergenceWarning)
+training model is done
+2014-08-04 07:38:04.400588
+target y prediction is done
+2014-08-04 07:39:58.444628
+savetxt is done
+2014-08-04 07:40:01.956472
+
+C=1.0, gamma=0.1,
+[zhimo.bmz@storm010207030001 pycharm]$ time python2.7 fpSVM.py
+2014-08-04 11:28:04.682119
+/usr/lib/python2.7/site-packages/sklearn/svm/base.py:204: ConvergenceWarning: Solver terminated early (max_iter=20000).  Consider pre-processing your data with StandardScaler or MinMaxScaler.
+  % self.max_iter, ConvergenceWarning)
+training model is done
+2014-08-04 14:52:18.067591
+target y prediction is done
+2014-08-04 16:42:45.291831
+savetxt is done
+2014-08-04 16:42:48.792789
+[1]+  Done                    python2.7 fpSVM.py > fpsvm.log
+
+real	314m46.412s
+user	335m17.397s
+sys	0m20.052s
+
+
+prediction: 0.128405396696
+
+C=0.1, gamma=0.1 6.79
+[zhimo.bmz@storm010207030001 pycharm]$ time python2.7 fpSVM.py
+2014-08-04 23:35:26.013586
+/usr/lib/python2.7/site-packages/sklearn/svm/base.py:204: ConvergenceWarning: Solver terminated early (max_iter=10).  Consider pre-processing your data with StandardScaler or MinMaxScaler.
+  % self.max_iter, ConvergenceWarning)
+training model is done
+2014-08-04 23:37:22.962213
+target y prediction is done
+2014-08-04 23:39:15.928144
+savetxt is done
+2014-08-04 23:39:19.422802
+
+real	3m55.798s
+user	3m47.422s
+sys	0m8.164s
+
+C=0.1, gamma=0.1, epsilon=0.1, 6.97444078532
+C=1, gamma=0.1, epsilon=0.1, 6.97443829516
+C=3, gamma=0.1, epsilon=0.1, 6.97443276149
+
+
