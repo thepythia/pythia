@@ -26,7 +26,7 @@ colvar = ['var1', 'var2', 'var3', 'var4', 'var5', 'var6', 'var7', 'var8', 'var9'
 
 time()
 
-xraw = list(csv.DictReader(open('dataset/train.csv', 'rU')))
+xraw = list(csv.DictReader(open('dataset/t1.csv', 'rU')))
 y = [myfloat(d.pop('target')) for d in xraw]
 idtrain = [int(d.pop('id')) for d in xraw]
 
@@ -53,7 +53,7 @@ del trainvec
 del idy
 del xvec
 
-xrawtest = list(csv.DictReader(open('dataset/test.csv', 'rU')))
+xrawtest = list(csv.DictReader(open('dataset/t2.csv', 'rU')))
 print 'xrawtest read is done'
 time()
 idtest = [int(d.pop('id')) for d in xrawtest]

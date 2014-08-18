@@ -30,7 +30,7 @@ for score in scores:
     print("# Tuning hyper-parameters for %s" % score)
     print
 
-    svr_grid = GridSearchCV(svm.SVR(kernel='rbf', C=1000, gamma=0.1, cache_size=2000, max_iter=10000),
+    svr_grid = GridSearchCV(svm.SVR(kernel='rbf', C=1000, gamma=0.1, cache_size=5000, max_iter=10000),
                             param_grid, cv=2, scoring=score)
     svr_grid.fit(x_train, y_train)
 
