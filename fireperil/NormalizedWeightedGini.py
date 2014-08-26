@@ -1,8 +1,8 @@
 __author__ = 'Chitrasen'
 
-from __future__ import division
 import pandas as pd
 import numpy as np
+import math
 
 def weighted_gini(actual, pred, weight):
     df = pd.DataFrame({"actual": actual, "pred": pred, "weight": weight})
@@ -19,3 +19,10 @@ def weighted_gini(actual, pred, weight):
 
 def normalized_weighted_gini(actual, pred, weight):
     return weighted_gini(actual, pred, weight) / weighted_gini(actual, actual, weight)
+
+def myfloor(x):
+    return math.floor(x*100)/100.0
+
+data = np.loadtxt("/home/phoenix/kaggle/FirePerilLossCost/ycarttest.txt", delimiter=",")
+score = normalized_weighted_gini(data[:, 1], map(myfloor, data[:, 2]), data[:, 3])
+print score
