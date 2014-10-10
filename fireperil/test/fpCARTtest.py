@@ -1,17 +1,15 @@
 __author__ = 'phoenix'
 
-__author__ = 'phoenix'
-
 from datetime import datetime
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import AdaBoostRegressor
 from sklearn.preprocessing import LabelEncoder
+from sklearn.externals import joblib
 import pandas as pd
 import numpy as np
 import math
 
 # data = np.loadtxt('dataset/t1.csv', delimiter=',')
-# data = np.genfromtxt('dataset/t1.csv', dtype=, delimiter=',', skip_header=0, converters={0: naConv})
 def time():
     print datetime.now()
 
@@ -54,20 +52,9 @@ testtarget = testdata.ix[:, 1]
 testdummy = testdata.ix[:, 19]
 testweight = testdata.ix[:, 12]
 
-#real test data
-# testdata = pd.read_csv('/home/phoenix/kaggle/FirePerilLossCost/test50.csv', delimiter=',', header=0)
-# testdata = testdata.replace(to_replace='nan', value=-1)
-# testids = testdata.ix[:, 0]
-# testvar19 = testdata.ix[:, 1:10]
-# testdummy = testdata.ix[:, 18]
-# testweight = testdata.ix[:, 11]
-
 colnomial = ['var1', 'var2', 'var3', 'var4', 'var5', 'var6', 'var7', 'var8', 'var9']
 
 for col in colnomial:
-    # print col
-    # print np.unique(var19[col].astype(str))
-    # print np.unique(testvar19[col].astype(str))
     traincol = var19[col].astype(str)
     testcol = testvar19[col].astype(str)
     tmp = pd.concat([traincol, testcol], axis=0)
@@ -84,22 +71,23 @@ print x.shape
 print 'data preparation is done!'
 time()
 
-depths = [10]
-leafs = [1]
+depths = [10, 20, 30, 40]
+estimates = [100, 150, 200, 250, 300, 350]
 
 testx = pd.concat([testvar19, testdata.ix[:, 11], testdata.ix[:, 13:19], testdata.ix[:, 20:]], axis=1)
 
 for d in depths:
-    for l in leafs:
-        print("depth:", d, " leaf:", l)
+    for e in estimates:
+        print("depth:", d, " estimate:", e)
         rng = np.random.RandomState(1)
         # cart = tree.DecisionTreeRegressor(max_depth=d, min_samples_leaf=l)
-        cart = AdaBoostRegressor(DecisionTreeRegressor(max_depth=d, min_samples_leaf=l), n_estimators=500, random_state=rng) #, n_estimators=300
+        cart = AdaBoostRegressor(DecisionTreeRegressor(max_depth=d, min_samples_leaf=1), n_estimators=e, random_state=rng) #, n_estimators=300
         cart = cart.fit(x, target, sample_weight=weight.values)
         y = cart.predict(testx.values)
         time()
         score = normalized_weighted_gini(testtarget, map(myfloor, y), testweight)
         print score
+        joblib.dump(cart, 'adaboost-'+d+"-"+e+".pk1", compress=3)
 
 
 # dtr = tree.DecisionTreeRegressor(max_depth=60, min_samples_leaf=5)
@@ -127,10 +115,3 @@ for d in depths:
 # score = normalized_weighted_gini(testtarget, map(myfloor, y), testweight)
 # score = normalized_weighted_gini(target, map(myfloor, y), weight)
 # print score
-
-
-#30, 15, 0.765053784938
-#40, 5, 0.92
-#50, 5, 0.986426372864
-#60, 5, 0.994932186337
-#70, 5, 0.995084537556
