@@ -86,10 +86,10 @@ from skimage import data, color, exposure
 
 
 # image = color.rgb2gray(data.lena())
-image = color.rgb2gray(misc.imread("/home/phoenix/Downloads/abc.jpg"))
+image = color.rgb2gray(misc.imread("/home/phoenix/dataset/image/shoe/T1RHJvXs4cXXXXXXXX_!!0-item_pic.jpg"))
 print(image.shape)
-fd, hog_image = hog(image, orientations=6, pixels_per_cell=(16, 16),
-                    cells_per_block=(2, 2), visualise=True)
+fd, hog_image = hog(image, orientations=8, pixels_per_cell=(8, 8),
+                    cells_per_block=(4, 4), visualise=True)
 print(fd.shape)
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
 
