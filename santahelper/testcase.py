@@ -6,6 +6,8 @@ import numpy as np
 
 import skimage
 
+np.nonzero()
+
 def chunks(l, n):
     for i in xrange(0, len(l), n):
        yield l[i:i+n]
@@ -67,3 +69,6 @@ print float(2)/3
 # print(zip(*elements)[2])
 #
 # print len((752, 500))
+
+df6 = pd.read_hdf("/home/phoenix/pycharm/ipython/det_output.h5", "df")
+print df6.iloc[0]
