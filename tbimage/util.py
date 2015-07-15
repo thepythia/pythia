@@ -13,7 +13,7 @@ def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="input file for svm format conversion")
     parser.add_argument("output", help="output file after the conversion")
-    # parser.add_argument("--sep", default=",", help="field separator")
+    parser.add_argument("--sep", default=",", help="field separator")
     # parser.add_argument("--header", default=None, help="specify if header column is specified at top of input file")
     # parser.add_argument("--names", default=None, help="specify column names for the input file")
 

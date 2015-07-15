@@ -14,16 +14,16 @@ import xgboost as xgb
 
 def main(argv):
 
-    print "Usage: train train_data.csv gbdt_version.model --max_depth=4 --silent=0 --num_class=4 --num_round=200"
-    print "       predict testing_data.csv prediction_output.csv --model=gbdt_version.model --nthread=10 --batch_size=2000"
-    print "       sampling prediction_output.csv sample_output.csv --sampling_size=1000"
+    usage = """Usage: train train_data.csv gbdt_version.model --max_depth=4 --silent=0 --num_class=4 --num_round=200 \n
+                       predict testing_data.csv prediction_output.csv --model=gbdt_version.model --nthread=10 --batch_size=2000 \n
+                       sampling prediction_output.csv sample_output.csv --sampling_size=1000"""
 
     current_dir = os.path.dirname(__file__)
-    print "current directory: %s" % current_dir
+    # print "current directory: %s" % current_dir
     format = "%Y%m%d"
     today = date.today().strftime(format)
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(usage=usage)
     # Required arguments: input, model_file
     parser.add_argument("type", help="train|predict|sampling")
     parser.add_argument("input", help="Input data for testing or training")
@@ -41,14 +41,19 @@ def main(argv):
     parser.add_argument("--num_class", default=4, help="the number of classes for classification")
     parser.add_argument("--min_child_weight", default=10, help="minimum sum of instance weight(hessian) \
                                                                 needed in a child.")
-    parser.add_argument("--num_round", default=500, help="the number of round for boosting")
+    parser.add_argument("--num_round", default=2000, help="the number of round for boosting")
     parser.add_argument("--batch_size", default=100000, help="batch size that used to process testing data in batch")
     parser.add_argument("--sampling_size", default=1000, help="sampling size for each class, default is 1000")
+    # <featureid> <featurename> <q or i or int>\n  (q for quantity, i for indicator, int for integer)
+    parser.add_argument("--fmap", default=None, help="feature map for the dumping model")
+    parser.add_argument("--test", default=None, help="test data for validation purpose, for svm format only")
 
     args = parser.parse_args()
 
     if args.type == "train":
         train(args)
+    elif args.type == "train_in_svm":
+        train_in_svm(args)
     elif args.type == "predict":
         predict(args)
     elif args.type == "sampling":
@@ -79,8 +84,42 @@ def train(args):
     watchlist = [(xg_train, 'train'), (xg_test, 'test')]
     bst = xgb.train(param, xg_train, int(args.num_round), watchlist)
     bst.save_model(args.output)
+    if args.fmap is not None:
+        bst.dump_model(args.output+'.dump', args.fmap, with_stats=True)
+    else:
+        bst.dump_model(args.output+'.dump', with_stats=True)
+    print bst.get_fscore(args.fmap)
     # get prediction
     pred = bst.predict(xg_test)
+
+    print ('predicting, classification error=%f' % (sum(int(pred[i]) != test_Y[i]
+                                                        for i in range(len(test_Y))) / float(len(test_Y))))
+
+    print "start time    : %s !" % starttime
+    print "finished time : %s !" % datetime.today().strftime(format)
+
+
+def train_in_svm(args):
+    """
+    """
+    format = "%Y-%m-%d %H:%M:%S"
+    starttime = datetime.today().strftime(format)
+
+    xg_train = xgb.DMatrix(args.input)
+    xg_test = xgb.DMatrix(args.test)
+    # setup parameters for xgboost
+    param = vars(args)
+    watchlist = [(xg_train, 'train'), (xg_test, 'test')]
+    bst = xgb.train(param, xg_train, int(args.num_round), watchlist)
+    bst.save_model(args.output)
+    if args.fmap is not None:
+        bst.dump_model(args.output+'.dump', args.fmap, with_stats=True)
+    else:
+        bst.dump_model(args.output+'.dump', with_stats=True)
+    print bst.get_fscore(args.fmap)
+    # get prediction
+    pred = bst.predict(xg_test)
+    test_Y = xg_test.get_label()
 
     print ('predicting, classification error=%f' % (sum(int(pred[i]) != test_Y[i]
                                                         for i in range(len(test_Y))) / float(len(test_Y))))

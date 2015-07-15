@@ -13,6 +13,7 @@ test_aid = data[:, 0]
 
 xg_test = xgb.DMatrix(test_X)
 bst = xgb.Booster({'nthread':6}, model_file=model)
+print bst
 pred = bst.predict(xg_test)  #objective is softmax, so 1D array is returned
 if (len(pred) == len(test_aid)):
     np.savetxt(output, list(zip(test_aid, pred)), fmt="%d", delimiter=",")
