@@ -18,8 +18,8 @@ def main(args):
     # parser.add_argument("--names", default=None, help="specify column names for the input file")
 
     args = parser.parse_args()
-    convert2svm(args)
-
+    # convert2svm(args)
+    to_svm(args)
 
 def convert2svm(args):
     """
@@ -50,6 +50,21 @@ def sortRows():
     sortedData = data.sort(['label', 'percent'], ascending=[True, False])
     result = sortedData[['shop_id', 'nick']]
     result.to_csv("/home/zhimo.bmz/data/demo_iq_best_sellers_output.txt", sep="\t", index=None, columns=None)
+
+
+def to_svm(args):
+    sep = " "
+    input = open(args.input)
+    lines = (l.split(args.sep) for l in input)
+    def svm_format(l):
+        for idx, feat in enumerate(l):
+            yield str(idx+1) + ":" + feat
+    svmlines = (l[1] + sep + sep.join(svm_format(l[3:])) for l in lines)
+    output = open(args.output, 'w')
+    output.writelines(svmlines)
+    output.flush()
+    output.close()
+
 
 
 if __name__ == '__main__':

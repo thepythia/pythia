@@ -8,15 +8,19 @@ import numpy as np
 import pandas as pd
 import os
 import sys
+import random
 import argparse
 from datetime import date, datetime
 import xgboost as xgb
 
 def main(argv):
 
-    usage = """Usage: train train_data.csv gbdt_version.model --max_depth=4 --silent=0 --num_class=4 --num_round=200 \n
+    usage = """Usage: train train_data.csv gbdt_version.model --nfold=5 --xindex=2 --max_depth=4 --silent=0 --num_class=4 --num_round=200 \n
+                       train_in_svm train_data.svm xgbtree.model --split --nfold=5 (or --test=test_data.svm)
+                       to_svm train_data.csv train_data.svm --sep=, --xindex=2
                        predict testing_data.csv prediction_output.csv --model=gbdt_version.model --nthread=10 --batch_size=2000 \n
-                       sampling prediction_output.csv sample_output.csv --sampling_size=1000"""
+                       sampling prediction_output.csv sample_output.csv --sampling_size=1000 \n
+                       cv train_data.svm --nfold=4 --num_round=10 """
 
     current_dir = os.path.dirname(__file__)
     # print "current directory: %s" % current_dir
@@ -41,12 +45,16 @@ def main(argv):
     parser.add_argument("--num_class", default=4, help="the number of classes for classification")
     parser.add_argument("--min_child_weight", default=10, help="minimum sum of instance weight(hessian) \
                                                                 needed in a child.")
-    parser.add_argument("--num_round", default=2000, help="the number of round for boosting")
-    parser.add_argument("--batch_size", default=100000, help="batch size that used to process testing data in batch")
-    parser.add_argument("--sampling_size", default=1000, help="sampling size for each class, default is 1000")
+    parser.add_argument("--num_round", default=2000, type=int, help="the number of round for boosting")
+    parser.add_argument("--batch_size", default=100000, type=int, help="batch size that used to process testing data in batch")
+    parser.add_argument("--sampling_size", default=1000, type=int, help="sampling size for each class, default is 1000")
     # <featureid> <featurename> <q or i or int>\n  (q for quantity, i for indicator, int for integer)
     parser.add_argument("--fmap", default=None, help="feature map for the dumping model")
     parser.add_argument("--test", default=None, help="test data for validation purpose, for svm format only")
+    parser.add_argument("--nfold", default=5, type=int, help="n-fold number for cross validation")
+    parser.add_argument("--xindex", default=2, type=int, help="starting index of features for training or testing")
+    parser.add_argument("--split", action='store_true', help="wheter to split input data to training vs. testing")
+    parser.add_argument("--sep", default=',', help="separator used in input file")
 
     args = parser.parse_args()
 
@@ -56,11 +64,36 @@ def main(argv):
         train_in_svm(args)
     elif args.type == "predict":
         predict(args)
+    elif args.type == "cv":
+        cross_validate(args)
     elif args.type == "sampling":
         sampling(args)
+    elif args.type == "to_svm":
+        to_svm(args)
     else:
         print("Invalid operation type, only train, predict or sampling is supported!")
 
+
+def preprocess(args):
+    data = np.loadtxt(args.input, delimiter=",")
+    num_rows = data.shape[0]
+    np.random.seed(13)
+    randidx = np.random.randint(0, args.nfold, size=num_rows)
+    train_data = data[randidx < args.nfold - 1]
+    test_data = data[randidx == args.nfold - 1]
+
+    train_x = train_data[:, args.xindex:]
+    train_y = train_data[:, 0]
+    test_x = test_data[:, args.xindex:]
+    test_y = test_data[:, 0]
+
+    xg_train = xgb.DMatrix(train_x, label=train_y)
+    xg_test = xgb.DMatrix(test_x, label=test_y)
+
+    # setup parameters for xgboost
+    param = vars(args)
+
+    return xg_train, xg_test, param
 
 
 def train(args):
@@ -68,35 +101,40 @@ def train(args):
     """
     format = "%Y-%m-%d %H:%M:%S"
     starttime = datetime.today().strftime(format)
-    data = np.loadtxt(args.input, delimiter=",")
-    train = data[data[:, 0]==1] # 1 indicates training data
-    test = data[data[:, 0]==-1] # -1 indicates validation data
+    xg_train, xg_test, param = preprocess(args)
 
-    train_X = train[:, 3:]
-    train_Y = train[:, 1]
-    test_X = test[:, 3:]
-    test_Y = test[:, 1]
-
-    xg_train = xgb.DMatrix(train_X, label=train_Y)
-    xg_test = xgb.DMatrix(test_X, label=test_Y)
-    # setup parameters for xgboost
-    param = vars(args)
     watchlist = [(xg_train, 'train'), (xg_test, 'test')]
     bst = xgb.train(param, xg_train, int(args.num_round), watchlist)
     bst.save_model(args.output)
     if args.fmap is not None:
         bst.dump_model(args.output+'.dump', args.fmap, with_stats=True)
+        print bst.get_fscore(args.fmap)
     else:
         bst.dump_model(args.output+'.dump', with_stats=True)
-    print bst.get_fscore(args.fmap)
+        print bst.get_fscore()
     # get prediction
     pred = bst.predict(xg_test)
 
-    print ('predicting, classification error=%f' % (sum(int(pred[i]) != test_Y[i]
-                                                        for i in range(len(test_Y))) / float(len(test_Y))))
+    test_y = xg_test.get_label()
+    print ('predicting, classification error=%f' % (sum(int(pred[i]) != test_y[i]
+                                                        for i in range(len(test_y))) / float(len(test_y))))
 
     print "start time    : %s !" % starttime
     print "finished time : %s !" % datetime.today().strftime(format)
+
+
+def to_svm(args):
+    sep = " "
+    input = open(args.input)
+    lines = (l.split(args.sep) for l in input)
+    def svm_format(l):
+        for idx, feat in enumerate(l):
+            yield str(idx+1) + ":" + feat
+    svmlines = (l[0] + sep + sep.join(svm_format(l[args.xindex:])) for l in lines)
+    output = open(args.output, 'w')
+    output.writelines(svmlines)
+    output.flush()
+    output.close()
 
 
 def train_in_svm(args):
@@ -104,9 +142,22 @@ def train_in_svm(args):
     """
     format = "%Y-%m-%d %H:%M:%S"
     starttime = datetime.today().strftime(format)
+    if args.split:
+        data = open(args.input).readlines()
+        random.shuffle(data)
+        test_svm = args.input + '.test'
+        test_o = open(test_svm, 'w')
+        test_o.writelines(data[: len(data) / args.nfold])
+        test_o.flush()
+        test_o.close()
+    elif args.test is not None:
+        test_svm = args.test
+    else:
+        print "missing test dataset in train_in_svm()!"
+        sys.exit(0)
 
     xg_train = xgb.DMatrix(args.input)
-    xg_test = xgb.DMatrix(args.test)
+    xg_test = xgb.DMatrix(test_svm)
     # setup parameters for xgboost
     param = vars(args)
     watchlist = [(xg_train, 'train'), (xg_test, 'test')]
@@ -114,9 +165,11 @@ def train_in_svm(args):
     bst.save_model(args.output)
     if args.fmap is not None:
         bst.dump_model(args.output+'.dump', args.fmap, with_stats=True)
+        print bst.get_fscore(args.fmap)
     else:
         bst.dump_model(args.output+'.dump', with_stats=True)
-    print bst.get_fscore(args.fmap)
+        print bst.get_fscore()
+
     # get prediction
     pred = bst.predict(xg_test)
     test_Y = xg_test.get_label()
@@ -143,8 +196,8 @@ def predict(args):
         start = datetime.now()
         num += 1
         data = chunk.values
-        test_X = data[:, 1:]
-        test_aid = data[:, 0]
+        test_X = data[:, args.xindex:]
+        test_aid = data[:, :args.xindex]
 
         xg_test = xgb.DMatrix(test_X)
         pred = bst.predict(xg_test)  # objective is softmax, so 1D array is returned
@@ -188,6 +241,22 @@ def sampling(args):
     sample = data.groupby('label', as_index=False).apply(fn)
     output = sample[data.columns]
     output.to_csv(args.output, index=None, columns=None)
+
+
+def cross_validate(args):
+    """
+    Usage: cv iq_training_data_svm.txt dummy --num_round=1000
+    https://github.com/dmlc/xgboost/blob/master/demo/kaggle-higgs/higgs-cv.py
+    https://github.com/dmlc/xgboost/blob/master/demo/guide-python/cross_validation.py
+    :param args:
+    :return:
+    """
+
+    data = xgb.DMatrix(args.input)
+    param = vars(args)
+    xgb.cv(param, data, args.num_round, nfold=int(args.nfold),
+           metrics={'mlogloss', 'merror'}, seed=0)
+
 
 
 if __name__ == '__main__':
