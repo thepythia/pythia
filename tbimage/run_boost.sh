@@ -24,7 +24,7 @@ then
     python gbdt_classifier.py to_svm ${train_data} ${train_svm} --sep=, --xindex=2
 elif [[ $o_type = "predict" ]]
 then
-    python gbdt_classifier.py predict ${test_data} ${test_predict} --model=${model_name} --nthread=10 --batch_size=150000
+    nohup python gbdt_classifier.py predict ${test_data} ${test_predict} --model=${model_name} --nthread=10 --batch_size=150000 --xindex=1 &
 elif [[ $o_type = "sampling" ]]
 then
     python gbdt_classifier.py sampling ${test_predict} iq_test_predict_sample.csv --sampling_size=1000
