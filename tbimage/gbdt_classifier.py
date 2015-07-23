@@ -20,7 +20,8 @@ def main(argv):
                        to_svm train_data.csv train_data.svm --sep=, --xindex=2
                        predict testing_data.csv prediction_output.csv --model=gbdt_version.model --nthread=10 --batch_size=2000 \n
                        sampling prediction_output.csv sample_output.csv --sampling_size=1000 \n
-                       cv train_data.svm --nfold=4 --num_round=10 """
+                       cv train_data.svm --nfold=4 --num_round=10 \n
+                       grid train_data.svm no-output-needed --test=test_data.svm"""
 
     current_dir = os.path.dirname(__file__)
     # print "current directory: %s" % current_dir
@@ -70,6 +71,8 @@ def main(argv):
         sampling(args)
     elif args.type == "to_svm":
         to_svm(args)
+    elif args.type == "grid":
+        grid_search(args)
     else:
         print("Invalid operation type, only train, predict or sampling is supported!")
 
@@ -146,17 +149,22 @@ def train_in_svm(args):
         data = open(args.input).readlines()
         random.shuffle(data)
         test_svm = args.input + '.test'
+        train_svm = args.input + '.train'
         test_o = open(test_svm, 'w')
+        train_o = open(train_svm, 'w')
         test_o.writelines(data[: len(data) / args.nfold])
+        train_o.writelines(data[len(data)/args.nfold + 1:])
         test_o.flush()
         test_o.close()
+        train_o.flush()
+        train_o.close()
     elif args.test is not None:
         test_svm = args.test
     else:
         print "missing test dataset in train_in_svm()!"
         sys.exit(0)
 
-    xg_train = xgb.DMatrix(args.input)
+    xg_train = xgb.DMatrix(train_svm)
     xg_test = xgb.DMatrix(test_svm)
     # setup parameters for xgboost
     param = vars(args)
@@ -256,6 +264,31 @@ def cross_validate(args):
     param = vars(args)
     xgb.cv(param, data, args.num_round, nfold=int(args.nfold),
            metrics={'mlogloss', 'merror'}, seed=0)
+
+def grid_search(args):
+    eta = [0.5, 0.1, 0.05, 0.01]
+    # max_depth = [5, 6, 8]
+    num_round = 2000 #[200, 500, 800, 1200, 2000]
+    subsample = [0.6, 0.8, 1]
+    min_child_weight = [5, 10, 30, 50]
+
+    xg_train = xgb.DMatrix(args.input)
+    xg_test = xgb.DMatrix(args.test)
+    watchlist = [(xg_train, 'train'), (xg_test, 'test')]
+    param = vars(args)
+    for i in eta:
+        param['eta'] = i
+        for j in subsample:
+            param['subsample'] = j
+            for k in min_child_weight:
+                param['min_child_weight'] = k
+                print '\n----------------------------------------------------\n'
+                print '-----eta: %f, subsample: %f, min_child_weight: %i \n' % (i, j, k)
+                bst = xgb.train(param, xg_train, num_round, watchlist)
+                # pred = bst.predict(xg_test)
+                # test_Y = xg_test.get_label()
+                # print ('predicting, classification error=%f' % (sum(int(pred[i]) != test_Y[i]
+                #                                                     for i in range(len(test_Y))) / float(len(test_Y))))
 
 
 
