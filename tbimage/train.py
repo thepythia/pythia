@@ -33,7 +33,7 @@ param['num_class'] = 4
 param['min_child_weight'] = 10
 
 watchlist = [(xg_train, 'train'), (xg_test, 'test')]
-num_round = [500]
+num_round = [2]
 for i in num_round:
     bst = xgb.train(param, xg_train, i, watchlist)
     bst.save_model("./xgbtree.model")

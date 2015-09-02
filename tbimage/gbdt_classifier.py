@@ -35,7 +35,7 @@ def main(argv):
     parser.add_argument("output", help="output file, to save model for training and \
                                         to save prediction result in prediction case")
     # Optional arguments
-    parser.add_argument("--model", default=os.path.join(current_dir, "xgb_"+today+".model"),
+    parser.add_argument("--model", default=os.path.join(current_dir, "xgbtree_"+today+".model"),
                         help="model filename, to load from for prediction")
     parser.add_argument("--objective", default='multi:softmax',
                         help="specify the learning task and the corresponding learning objective")
@@ -132,7 +132,7 @@ def to_svm(args):
     lines = (l.split(args.sep) for l in input)
     def svm_format(l):
         for idx, feat in enumerate(l):
-            yield str(idx+1) + ":" + feat
+            yield str(idx) + ":" + feat
     svmlines = (l[0] + sep + sep.join(svm_format(l[args.xindex:])) for l in lines)
     output = open(args.output, 'w')
     output.writelines(svmlines)
@@ -248,7 +248,7 @@ def sampling(args):
     fn = lambda obj: obj.loc[np.random.choice(obj.index, int(args.sampling_size), replace), :]
     sample = data.groupby('label', as_index=False).apply(fn)
     output = sample[data.columns]
-    output.to_csv(args.output, index=None, columns=None)
+    output.to_csv(args.output, index=None, columns=None, header=None)
 
 
 def cross_validate(args):
